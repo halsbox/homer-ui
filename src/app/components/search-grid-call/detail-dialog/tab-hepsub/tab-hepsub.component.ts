@@ -12,6 +12,9 @@ import {
 import { Functions } from '@app/helpers/functions';
 import { MatTabGroup } from '@angular/material/tabs';
 import { AfterViewInit } from '@angular/core';
+import {
+  PreferenceAdvancedService
+} from '@app/services';
 
 @Component({
     selector: 'app-tab-hepsub',
@@ -56,10 +59,14 @@ export class TabHepsubComponent implements OnInit, OnDestroy, AfterViewInit {
     indexTabPosition = 0;
 
     isLogs = true;
+    extraTemplates = [];
     subTabList = [];
     jsonData: any;
     _interval: any;
-    constructor(private cdr: ChangeDetectorRef) { }
+    constructor(
+      private _pas: PreferenceAdvancedService,
+      private cdr: ChangeDetectorRef
+    ) { }
     ngAfterViewInit() {
         setTimeout(() => {
             this.ready.emit({});
@@ -67,10 +74,26 @@ export class TabHepsubComponent implements OnInit, OnDestroy, AfterViewInit {
     }
 
     ngOnInit() {
-        this._interval = setInterval(() => {
-            this.matTabGroup.realignInkBar();
-            this.cdr.detectChanges();
-        }, 2000);
+      this._pas.getAll().toPromise().then((advanced: any) => {
+        const [extraTemplates] = advanced.data
+            .filter(i => i.category === 'search' && i.param === 'lokiserver')
+            .map(i => i.data.extraTemplates);
+        if (typeof extraTemplates !== 'undefined') {
+            if (this._dataItem.hasOwnProperty('data')) {
+                let captureId = this._dataItem.data.messages[0].source_data.captureId;
+                this.extraTemplates = extraTemplates.filter(i => (!i.hasOwnProperty('enableOn') &&
+                                                                  !i.hasOwnProperty('disableOn')) ||
+                                                                 (i.hasOwnProperty('enableOn') &&
+                                                                  i.enabledOn.includes(captureId)) ||
+                                                                 (i.hasOwnProperty('disableOn') &&
+                                                                  !i.disabledOn.includes(captureId)));
+            }
+        }
+      });
+      this._interval = setInterval(() => {
+          this.matTabGroup.realignInkBar();
+          this.cdr.detectChanges();
+      }, 2000);
     }
 
     ngOnDestroy() {

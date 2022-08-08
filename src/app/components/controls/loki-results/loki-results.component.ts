@@ -23,6 +23,7 @@ import { DateTimeRangeService } from '@app/services/data-time-range.service';
 export class LokiResultsComponent implements OnInit, AfterViewInit {
     @Input() id;
     @Input() dataItem: any;
+    @Input() extraTpl: any;
     @Input() isDisplayResult = false;
     @Input() isResultPage = false;
 
@@ -42,6 +43,12 @@ export class LokiResultsComponent implements OnInit, AfterViewInit {
     queryText: string;
     queryObject: any;
     rxText: string;
+    searchTemplate = '';
+    resultsSorter = [];
+    resultsLimit = 100;
+    timeRangeFromData = false;
+    timeRangeStartOffset = 0;
+    timeRangeEndOffset = 0;
     showTime = true;
     showTags = false;
     showTs = false;
@@ -69,6 +76,28 @@ export class LokiResultsComponent implements OnInit, AfterViewInit {
 
     ngOnInit() {
         this.customTimeRangeQuery ||= this._dtrs.getDatesForQuery(true);
+        if (typeof this.extraTpl !== 'undefined') {
+            if (this.extraTpl.hasOwnProperty('template')) {
+                this.searchTemplate = this.extraTpl.template;
+            }
+            if (this.extraTpl.hasOwnProperty('limit')){
+                this.resultsLimit = parseInt(this.extraTpl.limit);
+            }
+            if (this.extraTpl.hasOwnProperty('sortOrder') &&
+                Array.isArray(this.extraTpl.sortOrder)) {
+                this.resultsSorter = this.extraTpl.sortOrder;
+            }
+            if (this.extraTpl.hasOwnProperty('timeRangeFromData') &&
+                this.extraTpl.timeRangeFromData.hasOwnProperty('enabled')) {
+                this.timeRangeFromData = Boolean(this.extraTpl.timeRangeFromData.enabled);
+                if (this.extraTpl.timeRangeFromData.hasOwnProperty('startOffset')) {
+                    this.timeRangeStartOffset = parseInt(this.extraTpl.timeRangeFromData.startOffset);
+                }
+                if (this.extraTpl.timeRangeFromData.hasOwnProperty('endOffset')) {
+                    this.timeRangeEndOffset = parseInt(this.extraTpl.timeRangeFromData.endOffset);
+                }
+            }
+        }
         this.getLabels();
     }
     ngAfterViewInit() {
@@ -91,6 +120,12 @@ export class LokiResultsComponent implements OnInit, AfterViewInit {
                 return a;
             }, [])
             .join('|');
+        if (this.searchTemplate) {
+            this.queryText = this.searchTemplate.replace(/\${(.*?)}/g, (match,token)=>
+                token==='labels'?labels:token.split('.').reduce((parent, key) => parent[key], this.dataItem));
+            this.cdr.detectChanges();
+            return;
+        }
         this.lokiTemplate = {
             lineFilterOperator: '|~',
             logStreamSelector: '{job="heplify-server"}'
@@ -112,6 +147,17 @@ export class LokiResultsComponent implements OnInit, AfterViewInit {
         });
         this.cdr.detectChanges();
     }
+    getSearchTimestamp() {
+        if (this.timeRangeFromData &&
+            this.dataItem.hasOwnProperty('data')){
+            const calldata = this.dataItem.data.data.calldata;
+            return {
+                from: calldata[0].micro_ts + this.timeRangeStartOffset,
+                to: calldata[calldata.length - 1].micro_ts + this.timeRangeEndOffset
+            }
+        }
+        return this._dtrs.getDatesForQuery(true);
+    }
     queryBuilder() {
         /** depricated, need use {SearchService} */
 
@@ -122,7 +168,7 @@ export class LokiResultsComponent implements OnInit, AfterViewInit {
                 search: this.queryObject.text,
                 timezone: this.searchService.getTimeZoneLocal(),
             },
-            timestamp: this._dtrs.getDatesForQuery(true),
+            timestamp: this.getSearchTimestamp(),
         };
     }
 
@@ -143,6 +189,17 @@ export class LokiResultsComponent implements OnInit, AfterViewInit {
                     l.custom_2 = this.labelsFormatter(l.custom_2);
                     return l;
                 });
+
+                if (this.resultsSorter.length > 0) {
+                    this.resultData = this.resultData.sort(
+                        (a, b) => this.resultsSorter.map(o => {
+                            let dir = 1;
+                            if (o[0] === '-') { dir = -1; o=o.substring(1); }
+                            return a[o] > b[o] ? dir : a[o] < b[o] ? -(dir) : 0;
+                        }).reduce((p, n) => p ? p : n, 0)
+                    );
+                }
+
                 this.resultData = this.resultData.map((i) => {
                     i.custom_1 = this.highlight(i.custom_1);
                     return i;
@@ -161,7 +218,7 @@ export class LokiResultsComponent implements OnInit, AfterViewInit {
     }
     onUpdateData(event) {
         this.queryObject = event;
-        this.queryObject.limit = 100;
+        this.queryObject.limit = this.resultsLimit;
         if (this.isDisplayResult && this.isFirstSearch) {
             this.doSerchResult();
         }
