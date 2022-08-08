@@ -371,7 +371,7 @@ class QosProcessor {
           _indeterminate: true,
           _checked: false,
           packetsData: [],
-          packets: true,
+          packets: false,
           octetsData: [],
           octets: false,
           highest_seq_noData: [],
@@ -385,7 +385,7 @@ class QosProcessor {
           lsrData: [],
           lsr: false,
           mosData: [],
-          mos: false
+          mos: true
         });
       }
       this.streamsRTCP.forEach((k: any) => {
