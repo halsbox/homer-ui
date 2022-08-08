@@ -184,7 +184,7 @@ class QosProcessor {
     { name: 'max fraction_lost', value: 0, color: 'color8' },
   ];
 
-  public hideLabelsFlag = true;
+  public hideLabelsFlag = false;
   public hideLabelsFlagRTP = true;
   public streamsRTCP: Array<any> = [];
   public streamsRTP: Array<any> = [];
@@ -371,21 +371,21 @@ class QosProcessor {
           _indeterminate: true,
           _checked: false,
           packetsData: [],
-          packets: false,
+          packets: true,
           octetsData: [],
           octets: false,
           highest_seq_noData: [],
           highest_seq_no: false,
           ia_jitterData: [],
-          ia_jitter: false,
+          ia_jitter: true,
           packets_lostData: [],
-          packets_lost: false,
+          packets_lost: true,
           fraction_lostData: [],
           fraction_lost: false,
           lsrData: [],
           lsr: false,
           mosData: [],
-          mos: true
+          mos: false
         });
       }
       this.streamsRTCP.forEach((k: any) => {
