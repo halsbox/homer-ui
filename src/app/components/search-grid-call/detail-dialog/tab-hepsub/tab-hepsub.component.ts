@@ -84,9 +84,9 @@ export class TabHepsubComponent implements OnInit, OnDestroy, AfterViewInit {
                 this.extraTemplates = extraTemplates.filter(i => (!i.hasOwnProperty('enableOn') &&
                                                                   !i.hasOwnProperty('disableOn')) ||
                                                                  (i.hasOwnProperty('enableOn') &&
-                                                                  i.enabledOn.includes(captureId)) ||
+                                                                  i.enableOn.includes(captureId)) ||
                                                                  (i.hasOwnProperty('disableOn') &&
-                                                                  !i.disabledOn.includes(captureId)));
+                                                                  !i.disableOn.includes(captureId)));
             }
         }
       });
